@@ -29,8 +29,21 @@ SERVICE_COLUMNS = ("mac", "device_id", "serial")
 KIND_RU = {"water": "Вода", "gas": "Газ", "water_legacy": "Вода", "unknown": "Прибор"}
 
 
-def default_label(kind: str, serial: int) -> str:
-    name = KIND_RU.get(kind, "Прибор")
+def kind_label(kind: str, channel: int) -> str:
+    """Понятное человеку название, без технического номера канала."""
+    if kind == "gas":
+        return "Газ"
+    if channel == 1:
+        return "Холодная вода"
+    if channel == 3:
+        return "Горячая вода (до +40 °C)"
+    if channel == 4:
+        return "Горячая вода (выше +40 °C)"
+    return "Вода"
+
+
+def default_label(kind: str, channel: int, serial: int) -> str:
+    name = kind_label(kind, channel)
     return f"{name} № {serial:07d}" if serial else name
 
 
@@ -56,7 +69,7 @@ class Device:
     history: list[tuple[float, float]] = field(default_factory=list)
 
     def display_name(self) -> str:
-        return self.label or default_label(self.kind, self.serial)
+        return self.label or default_label(self.kind, self.channel, self.serial)
 
 
 class Store:
@@ -100,7 +113,7 @@ class Store:
             dev.channel = reading.channel
             dev.serial = reading.serial
             if not dev.label:
-                dev.label = default_label(reading.kind, reading.serial)
+                dev.label = default_label(reading.kind, reading.channel, reading.serial)
             previous = dev.volume if dev.last_ts else None
             dev.volume = reading.volume_m3
             if dev.base_volume is None:
@@ -165,12 +178,12 @@ class App(tk.Tk):
         columns = MAIN_COLUMNS + SERVICE_COLUMNS
         self.tree = ttk.Treeview(left, columns=columns, show="headings", height=12)
         headers = {
-            "device": "Прибор", "kind": "Тип/канал", "volume": "м³", "temp": "°C",
-            "battery": "батар.", "flow": "вода", "last": "пакет", "delta": "Δ к табло",
-            "cost": "₽", "mac": "MAC", "device_id": "ID", "serial": "Серийный",
+            "device": "Счётчик", "kind": "Что измеряет", "volume": "Показание, м³", "temp": "Температура, °C",
+            "battery": "Батарея", "flow": "Вода идёт?", "last": "Последний сигнал", "delta": "Расхождение с табло",
+            "cost": "Стоимость, ₽", "mac": "MAC", "device_id": "ID", "serial": "Серийный номер",
         }
-        widths = {"device": 180, "kind": 90, "volume": 95, "temp": 55, "battery": 55,
-                  "flow": 55, "last": 80, "delta": 90, "cost": 70,
+        widths = {"device": 230, "kind": 210, "volume": 100, "temp": 100, "battery": 70,
+                  "flow": 80, "last": 90, "delta": 130, "cost": 90,
                   "mac": 135, "device_id": 150, "serial": 90}
         for col in columns:
             self.tree.heading(col, text=headers[col])
@@ -188,7 +201,7 @@ class App(tk.Tk):
         self.canvas.get_tk_widget().pack(fill="both", expand=True, pady=(8, 0))
 
         ttk.Label(right, text="Настройки выбранного прибора").pack(anchor="w")
-        ttk.Label(right, text="Название (как в приложении)").pack(anchor="w", pady=(8, 0))
+        ttk.Label(right, text="Название счётчика (как в приложении)").pack(anchor="w", pady=(8, 0))
         self.label_var = tk.StringVar()
         ttk.Entry(right, textvariable=self.label_var, width=34).pack(anchor="w")
 
@@ -205,6 +218,14 @@ class App(tk.Tk):
                         variable=self.show_service, command=self.toggle_service).pack(anchor="w", pady=(4, 0))
         self.service = ttk.Label(right, text="", foreground="#555", wraplength=340, justify="left")
         self.service.pack(anchor="w", pady=(8, 0))
+        ttk.Label(right, text="Что означает «Что измеряет»:\n"
+                              "• Холодная вода — счётчик ХВС;\n"
+                              "• Горячая вода — один счётчик ГВС с двумя регистрами:\n"
+                              "  до +40 °C и выше +40 °C (так считает сам прибор);\n"
+                              "• Газ — газовый счётчик.\n"
+                              "Технические номера каналов (01/03/04) —\n"
+                              "в служебных полях, обычному человеку не нужны.",
+                  foreground="#555", wraplength=340, justify="left").pack(anchor="w", pady=(8, 0))
         ttk.Label(right, text="Данные пишутся в:\n" + str(READINGS) + "\n\n"
                               "Тариф не задан — деньги не считаются.\n"
                               "Расход — только при росте объёма;\n"
@@ -224,7 +245,7 @@ class App(tk.Tk):
             dev = self.store.devices.get(self.selected)
         if dev is None:
             return
-        self.label_var.set(dev.label or default_label(dev.kind, dev.serial))
+        self.label_var.set(dev.label or default_label(dev.kind, dev.channel, dev.serial))
         self.tariff_var.set(f"{dev.tariff:.2f}" if dev.tariff else "")
         self.ref_var.set("" if dev.reference is None else f"{dev.reference:.4f}")
         self.update_service(dev)
@@ -253,7 +274,7 @@ class App(tk.Tk):
                 return
             raw = self.ref_var.get().replace(",", ".").strip()
             dev.reference = float(raw) if raw else None
-            dev.label = self.label_var.get().strip() or default_label(dev.kind, dev.serial)
+            dev.label = self.label_var.get().strip() or default_label(dev.kind, dev.channel, dev.serial)
         self.store.save_settings()
         self.refresh()
 
@@ -359,7 +380,7 @@ class App(tk.Tk):
             last = time.strftime("%H:%M:%S", time.localtime(dev.last_ts)) if dev.last_ts else "—"
             values = (
                 dev.display_name(),
-                f"{KIND_RU.get(dev.kind, dev.kind)} / {dev.channel:02d}",
+                kind_label(dev.kind, dev.channel),
                 f"{dev.volume:.4f}", f"{dev.temperature:.2f}", str(dev.battery),
                 "идёт" if dev.flow else "нет", last, delta, cost,
                 dev.mac, dev.device_id, f"{dev.serial:07d}",
