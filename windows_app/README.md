@@ -1,6 +1,6 @@
 # Elehant.exe — прототип для Windows
 
-**Готовый файл:** [Elehant.exe v0.1.0](https://github.com/Drujnv/elehant/releases/download/v0.1.0/Elehant.exe) (Windows x64, один файл, без Python).
+**Готовый файл:** [Elehant.exe v0.1.1](https://github.com/Drujnv/elehant/releases/download/v0.1.1/Elehant.exe) (Windows x64, один файл, без Python).
 
 ## Что делает
 
@@ -33,6 +33,13 @@ py -m venv .venv
 
 Или `build_exe.ps1`.
 
+## Что исправлено в v0.1.1
+
+- BLE-сканер перезапускается каждую минуту (на Windows он иногда замолкает);
+- имя прибора: `Вода № 0078233` вместо MAC; MAC/ID/серийный — в служебных полях;
+- название можно переименовать под приложение; 
+- статус показывает число пакетов и время последнего.
+
 ## Ограничения прототипа
 
 - пока нет выбора BLE-адаптера;
@@ -44,3 +51,4 @@ py -m venv .venv
 ## Проверка
 
 SHA-256 текущей сборки указан в `SHA256.txt`.
+Текущая сборка: `C8E18E1FDDB231A37616F18FEC685B9F73F9CC3E2E5ACAB4349ADF097A6D6C37`.
