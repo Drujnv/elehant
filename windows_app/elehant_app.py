@@ -229,7 +229,10 @@ class App(tk.Tk):
         ttk.Label(right, text="Данные пишутся в:\n" + str(READINGS) + "\n\n"
                               "Тариф не задан — деньги не считаются.\n"
                               "Расход — только при росте объёма;\n"
-                              "температура без воды расходом не считается.",
+                              "температура без воды расходом не считается.\n\n"
+                              "Счётчик нельзя опросить: он сам присылает пакеты.\n"
+                              "Без расхода — редко (до 10–15 минут).\n"
+                              "Если дольше — проверьте батарею/радиус.",
                   foreground="#555", wraplength=340, justify="left").pack(anchor="w", pady=(16, 0))
 
     def toggle_service(self) -> None:
@@ -304,18 +307,27 @@ class App(tk.Tk):
             with self.stats_lock:
                 self.scan_stats["packets"] += 1
                 self.scan_stats["last"] = time.time()
+            self.log(f"packet {reading.device_id} vol={reading.volume_m3} rssi={reading.rssi}")
             self.events.put(reading)
 
         async def run_once() -> None:
             from bleak import BleakScanner
 
+            self.log("scanner creating")
             scanner = BleakScanner(detection_callback=callback)
             await scanner.start()
+            self.log("scanner started")
             started = time.time()
             # Пересоздаём сканер каждую минуту: на Windows BleakScanner иногда замолкает.
-            while not self.stop_event.is_set() and time.time() - started < 60:
+            while not self.stop_event.is_set() and time.time() - started < 180:
                 await asyncio.sleep(0.5)
-            await scanner.stop()
+            self.log("scanner loop done")
+            try:
+                await asyncio.wait_for(scanner.stop(), timeout=10)
+            except Exception as error:  # noqa: BLE001
+                self.log("scanner stop error: " + repr(error))
+            self.log("scanner stopped")
+            await asyncio.sleep(2)  # дать WinRT освободить адаптер
 
         try:
             while not self.stop_event.is_set():
@@ -359,10 +371,13 @@ class App(tk.Tk):
             text = f"BLE ошибка: {stats['error']} (перезапуск)"
             color = "#a33"
         elif stats["last"]:
-            text = f"сканирую BLE… пакетов: {stats['packets']}, последний: {time.strftime('%H:%M:%S', time.localtime(stats['last']))}"
-            color = "#2a7"
+            age = max(0, int(time.time() - stats["last"]))
+            text = (f"сканер работает | пакетов: {stats['packets']} | "
+                    f"последний: {time.strftime('%H:%M:%S', time.localtime(stats['last']))} "
+                    f"({age // 60} мин {age % 60} с назад)")
+            color = "#2a7" if age < 600 else "#a66"
         else:
-            text = "сканирую BLE… пакетов пока нет"
+            text = "сканер работает… пакетов пока нет (счётчик вещает сам, без опроса)"
             color = "#666"
         self.status.configure(text=text, foreground=color)
 
