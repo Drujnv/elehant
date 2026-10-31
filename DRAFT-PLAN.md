@@ -1,6 +1,6 @@
 # Черновик: что публиковать, что убрать
 
-## 1. Предлагаемая структура (позже — в `MKS/sensors/elehant/`)
+## 1. Структура репозитория `Drujnv/elehant`
 
 ```
 elehant/
@@ -13,6 +13,7 @@ elehant/
 │   ├── INTEGRATIONS.md      HA/MQTT/PG/Grafana/ESP32
 │   └── SOURCES.md           чужие проекты и лицензии
 ├── windows/elehant_reader.py
+├── windows_app/Elehant.exe   прототип GUI
 ├── esp32/elehant_decode.c/.h + README
 └── homeassistant/elehant_mqtt.yaml
 ```
