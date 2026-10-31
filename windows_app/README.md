@@ -1,6 +1,6 @@
 # Elehant.exe — прототип для Windows
 
-**Готовый файл:** `Elehant.exe` (Windows x64, один файл, без Python).
+**Готовый файл:** [Elehant.exe v0.1.0](https://github.com/Drujnv/elehant/releases/download/v0.1.0/Elehant.exe) (Windows x64, один файл, без Python).
 
 ## Что делает
 

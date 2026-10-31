@@ -99,6 +99,8 @@
 
 ## Windows-приложение
 
+**Скачать:** [Elehant.exe v0.1.0](https://github.com/Drujnv/elehant/releases/download/v0.1.0/Elehant.exe) · [все релизы](https://github.com/Drujnv/elehant/releases)
+
 Готов прототип **`windows_app\Elehant.exe`**: постоянный BLE-сбор, таблица,
 график, расхождения с табло, необязательный тариф и деньги. Логика «вода идёт /
 только температура» — `docs/WINDOWS-APP.md`, запуск/сборка —
