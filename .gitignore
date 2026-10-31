@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+*.log
+
+# PlatformIO / ESP-IDF
+.pio/
+.pioenvs/
+.piolibdeps/
+sdkconfig
+sdkconfig.old
+build/
+*.bin
+*.elf
+*.map
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local secrets / captures
+secrets.h
+*secret*
+*token*
+*.pem

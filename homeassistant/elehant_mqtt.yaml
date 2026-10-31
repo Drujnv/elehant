@@ -1,0 +1,50 @@
+# Home Assistant: Элехант через MQTT.
+# Замените device_id на свой (B0:01:02:... без двоеточий, нижним регистром).
+# Пример для одного водосчётчика; для СВТ-15 добавьте каналы 03/04 отдельно.
+
+mqtt:
+  sensor:
+    - name: "Элехант: вода"
+      unique_id: elehant_water_volume
+      state_topic: "elehant/b0010200aabbcc/volume_m3"
+      unit_of_measurement: "m³"
+      device_class: water
+      state_class: total_increasing
+      suggested_display_precision: 4
+      device:
+        identifiers: ["elehant_b0010200aabbcc"]
+        name: "Элехант: вода"
+        manufacturer: "Elehant"
+        model: "СВД/СВТ"
+
+    - name: "Элехант: температура воды"
+      unique_id: elehant_water_temperature
+      state_topic: "elehant/b0010200aabbcc/temperature_c"
+      unit_of_measurement: "°C"
+      device_class: temperature
+      state_class: measurement
+      device:
+        identifiers: ["elehant_b0010200aabbcc"]
+
+    - name: "Элехант: батарея (сырое)"
+      unique_id: elehant_battery_raw
+      state_topic: "elehant/b0010200aabbcc/battery_raw"
+      state_class: measurement
+      icon: mdi:battery
+      device:
+        identifiers: ["elehant_b0010200aabbcc"]
+
+    - name: "Элехант: последний пакет"
+      unique_id: elehant_last_seen
+      state_topic: "elehant/b0010200aabbcc/last_seen"
+      device_class: timestamp
+      device:
+        identifiers: ["elehant_b0010200aabbcc"]
+
+# Бинарный сенсор «прибор молчит» — по желанию:
+template:
+  - binary_sensor:
+      - name: "Элехант: нет данных"
+        unique_id: elehant_silent
+        state: >-
+          {{ (as_timestamp(now()) - as_timestamp(states('sensor.elehant_posledniy_paket') | default(0))) > 1800 }}
